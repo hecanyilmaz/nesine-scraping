@@ -6,13 +6,15 @@ import pandas as pd
 
 class BasketballMatchDriver(NesineScrapper):
 
+    # Base URL
     URL = 'https://www.nesine.com/iddaa/canli-iddaa-canli-bahis?code='
+    # Number of seconds for waiting to synchronize
     SYNC_SECOND = 1
     COLUMNS = ['match_id', 'team_1', 'team_2', 'remaining_time', 'period', 'period_activity']
     
     def __init__(self,  match_id, url=URL):
         super(BasketballMatchDriver, self).__init__()
-
+        
         try:
             self.match_id = match_id
             self.url = url + self.match_id

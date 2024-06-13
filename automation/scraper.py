@@ -30,8 +30,8 @@ class NesineScrapper:
         time.sleep(1)    
 
         # Closes summer advertisement and awaits for SYNC_SECOND
-        button_cookies = self.find_element_until(By.XPATH, '//*[@id="mod-base"]/div/div/div[1]/a', wait=sync_second)
-        button_cookies.click()
+        button_summer_ad = self.find_element_until(By.XPATH, '//*[@id="mod-base"]/div/div/div[1]/a', wait=sync_second)
+        button_summer_ad.click()
 
         time.sleep(1)   
 
