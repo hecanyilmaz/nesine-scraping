@@ -1,26 +1,26 @@
-from api.nesine_basketball_scraper import NesineBasketballDriver
+from automation.scraper import NesineScrapper
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, NoSuchElementException
 from selenium.common.exceptions import WebDriverException
 import pandas as pd
 
-class PreMatchDriver(NesineBasketballDriver):
+class BasketballDriver(NesineScrapper):
 
     URL = 'https://www.nesine.com/iddaa/basketbol'
     SYNC_SECOND = 2
     COLUMNS = ['match_id', 'match_time', 'team_1', 'team_2', 'ms_1', 'ms_x', 'ms_2', 'fh_1', 'fh_x', 'fh_2', 'p1_1', 'p1_x', 'p1_2', 'p2_1', 'p2_x', 'p2_2', 'p3_1','p3_x', 'p3_2', 'p4_1', 'p4_x', 'p4_2']
 
     def __init__(self, url=URL):
-        super(PreMatchDriver, self).__init__()
+        super(BasketballDriver, self).__init__()
 
         try:
-            # Goes to the address given
+            # Goes to the URL given
             self.driver.get(url)
-            # Pass entrance 
+            # Passing entrance processes
             self.pass_entrance()
 
         except WebDriverException:
-            print("[INFO]: Web driver can not be reached out at the moment.")
+            print("[WEB_DRIVER_EXCEPTION]: Web driver can not be reached out at the moment.")
 
     # Clears the configuration have been made
     def clear_configuration(self, sync_second = SYNC_SECOND):
@@ -38,6 +38,10 @@ class PreMatchDriver(NesineBasketballDriver):
         configure_apply_filter_button.click()
     
     # Filters for configuration options
+    #
+    # 'day': 'today', 'tomorrow', 'next-day'
+    # 'sync_second': the number of seconds should be waited for loading page.
+    # 'bypass_clearing': clears pre-configured options
     def filter_configuration(self, day, sync_second = SYNC_SECOND, bypass_clearing=False):
 
         # Clearing past configured options if exist
@@ -73,9 +77,9 @@ class PreMatchDriver(NesineBasketballDriver):
             return []
     
     # Get ID's of matches as list
-    def get_ids_of_matches(self):
+    def get_ids(self):
         try:
-            return [[{'match_id': [match.get_attribute('data-code')]}] for match in self.get_list_of_matches()]
+            return [match.get_attribute('data-code') for match in self.get_list_of_matches()]
         except NoSuchElementException:
             return [[None] for match in self.get_list_of_matches()]
     
@@ -95,7 +99,7 @@ class PreMatchDriver(NesineBasketballDriver):
         except NoSuchElementException:
             return [{'match_time': [None]}]
 
-    # Get bet for 'ms'
+    # Get bet for 'ms' from ID
     def get_bet_ms(self, match_id):
         try:
             ms_1 = self.find_element_until(By.XPATH, f'//*[@id="collapse-{match_id}-all-0"]/div/div[1]/div[2]/div/div[2]/a[1]').text
@@ -112,7 +116,7 @@ class PreMatchDriver(NesineBasketballDriver):
 
         return [val if val != '' else None for val in [ms_1, ms_x, ms_2]]
     
-    # Get bet for 'first_half'
+    # Get bet for 'first_half' from ID
     def get_bet_fh(self, match_id):
         try:
             fh_1 = self.find_element_until(By.XPATH, f'//*[@id="collapse-{match_id}-all-2"]/div/div/div[2]/div/div[2]/a[1]').text
@@ -125,7 +129,7 @@ class PreMatchDriver(NesineBasketballDriver):
             
         return [val if val != '' else None for val in [fh_1, fh_x, fh_2]]
     
-    # Get bet for 'x th period'
+    # Get bet for 'x th period' from ID and period number
     def get_bet_period_x(self, match_id, period_number):
         try:
             p_1 = self.find_element_until(By.XPATH, f'//*[@id="collapse-{match_id}-all-4"]/div/div[{period_number}]/div[2]/div/div[2]/a[1]').text
@@ -138,86 +142,87 @@ class PreMatchDriver(NesineBasketballDriver):
             
         return [val if val != '' else None for val in [p_1, p_x, p_2]]
 
-    ## Get bets
+    # Get all bets
     # Returns list of dictionaries
     def get_detailed_bets(self, match_id, bets=['all_match', 'first_half', 'period_1', 'period_2', 'period_3', 'period_4']):
+        
         # Expands detailed bet view
         match_expand_collapse_button = self.find_element_until(By.XPATH, f'//*[@id="{match_id}_m"]')
         match_expand_collapse_button.click()
 
-        return_list = []
+        bets_list = []
 
         for bet in bets:
             match bet:
                 case 'all_match':
-                    return_list.extend([{'all_match': self.get_bet_ms(match_id=match_id)}])
+                    bets_list.extend([{'all_match': self.get_bet_ms(match_id=match_id)}])
                 case 'first_half':
-                    return_list.extend([{'first_half': self.get_bet_fh(match_id=match_id)}])
+                    bets_list.extend([{'first_half': self.get_bet_fh(match_id=match_id)}])
                 case 'period_1':
-                    return_list.extend([{'period_1': self.get_bet_period_x(match_id=match_id, period_number=1)}])
+                    bets_list.extend([{'period_1': self.get_bet_period_x(match_id=match_id, period_number=1)}])
                 case 'period_2':
-                    return_list.extend([{'period_2': self.get_bet_period_x(match_id=match_id, period_number=2)}])
+                    bets_list.extend([{'period_2': self.get_bet_period_x(match_id=match_id, period_number=2)}])
                 case 'period_3':
-                    return_list.extend([{'period_3': self.get_bet_period_x(match_id=match_id, period_number=3)}])
+                    bets_list.extend([{'period_3': self.get_bet_period_x(match_id=match_id, period_number=3)}])
                 case 'period_4':
-                    return_list.extend([{'period_4': self.get_bet_period_x(match_id=match_id, period_number=4)}])
+                    bets_list.extend([{'period_4': self.get_bet_period_x(match_id=match_id, period_number=4)}])
         
         # Collapses detailed bet view
-        #match_expand_collapse_button = self.find_element_until(By.XPATH, f'//*[@id="{match_id}_m"]/a')
+        # Unnecessary: match_expand_collapse_button = self.find_element_until(By.XPATH, f'//*[@id="{match_id}_m"]/a')
         match_expand_collapse_button.click()
 
-        return return_list
-
-    # Converting a record to the row as Pandas Dataframe
-    def record_to_row(self, record):
-
-        # To create a dataframe for the specific row, we put used columns and values into to lists
-        columns = []
-        values = []
-
-        for dic in record:
-            
-            key = list(dic.keys())[0]
-            value = dic.values()
-            
-            values.extend(*value)
-            
-            # Match the case to add appropriate columns to the row
-            match key:
-                case 'match_id':
-                    columns.extend(['match_id'])
-                case 'match_time':
-                    columns.extend(['match_time'])
-                case 'team_names':
-                    columns.extend(['team_1', 'team_2'])
-                case 'all_match':
-                    columns.extend(['ms_1', 'ms_x', 'ms_2'])
-                case 'first_half':
-                    columns.extend(['fh_1', 'fh_x', 'fh_2'])
-                case 'period_1':
-                    columns.extend(['p1_1', 'p1_x', 'p1_2'])
-                case 'period_2':
-                    columns.extend(['p2_1', 'p2_x', 'p2_2'])
-                case 'period_3':
-                    columns.extend(['p3_1', 'p3_x', 'p3_2'])
-                case 'period_4':
-                    columns.extend(['p4_1', 'p4_x', 'p4_2'])
-
-        df = pd.DataFrame([values], columns=columns)
-
-        return df
+        return bets_list
     
     # Concatenating rows and building a Pandas Dataframe
-    def to_df(self, multiple_records, path=False, save_it=False):
+    def to_df(self, multiple_matches, path=False, save=False):
+
+        # Converting a record to the row as Pandas Dataframe
+        def to_record(record):
+
+            # To create a dataframe for the specific row, we put used columns and values into to lists
+            columns = []
+            values = []
+
+            for dic in record:
+                
+                key = list(dic.keys())[0]
+                value = dic.values()
+                
+                values.extend(*value)
+                
+                # Match the case to add appropriate columns to the row
+                match key:
+                    case 'match_id':
+                        columns.extend(['match_id'])
+                    case 'match_time':
+                        columns.extend(['match_time'])
+                    case 'team_names':
+                        columns.extend(['team_1', 'team_2'])
+                    case 'all_match':
+                        columns.extend(['ms_1', 'ms_x', 'ms_2'])
+                    case 'first_half':
+                        columns.extend(['fh_1', 'fh_x', 'fh_2'])
+                    case 'period_1':
+                        columns.extend(['p1_1', 'p1_x', 'p1_2'])
+                    case 'period_2':
+                        columns.extend(['p2_1', 'p2_x', 'p2_2'])
+                    case 'period_3':
+                        columns.extend(['p3_1', 'p3_x', 'p3_2'])
+                    case 'period_4':
+                        columns.extend(['p4_1', 'p4_x', 'p4_2'])
+
+            df = pd.DataFrame([values], columns=columns)
+
+            return df
 
         df = pd.DataFrame(columns=self.COLUMNS)
 
-        for record in multiple_records:
-            row = self.record_to_row(record)
+        for matches in multiple_matches:
+            row = to_record(matches)
             df = pd.concat([df, row], ignore_index=True)
 
         # Save the dataframe as csv file
-        if (save_it==True):
+        if (save==True):
             df.to_csv(path, index=False)
 
         return df

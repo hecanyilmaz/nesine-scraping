@@ -1,29 +1,30 @@
-from api.nesine_basketball_scraper import NesineBasketballDriver
+from automation.scraper import NesineScrapper
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import WebDriverException
 import pandas as pd
 
-class DuringMatchDriver(NesineBasketballDriver):
+class BasketballMatchDriver(NesineScrapper):
 
     URL = 'https://www.nesine.com/iddaa/canli-iddaa-canli-bahis?code='
     SYNC_SECOND = 1
     COLUMNS = ['match_id', 'team_1', 'team_2', 'remaining_time', 'period', 'period_activity']
     
     def __init__(self,  match_id, url=URL):
-        super(DuringMatchDriver, self).__init__()
+        super(BasketballMatchDriver, self).__init__()
 
         try:
             self.match_id = match_id
             self.url = url + self.match_id
 
-            # Goes to the address given
+            # Goes to the given address
             self.driver.get(self.url)
+
             # Pass entrance 
             self.pass_entrance()
 
         except WebDriverException:
-            print("[INFO]: Web driver can not be reached out at the moment.")
+            print("[WEB_DRIVER_EXCEPTION]: Web driver can not be reached out at the moment.")
     
     # Get the team names in the match
     def get_team_names(self):
@@ -44,7 +45,11 @@ class DuringMatchDriver(NesineBasketballDriver):
     
     # Get the remaining time in a period
     def get_remaining_time(self):
-        pass
+        try: 
+            scores = list(map(lambda score: score.strip(), self.driver.find_element(By.XPATH, '//*[@id="live-match-detail"]/div/div[1]/div[2]/div/a/div/table/tbody/tr/td[2]').text.split('-')))
+            return [{'scores': scores}]
+        except:
+            return [{'scores': [None, None]}]
 
     # Get the what period is being played
     def get_period_number(self):
